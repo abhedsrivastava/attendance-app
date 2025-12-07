@@ -4,30 +4,38 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { Calendar } from 'react-native-calendars';
 
-const SubjectDetailScreen = ({ attendanceRecords, onUpdateAttendance }) => {
+const SubjectDetailScreen = ({ attendanceRecords, onUpdateAttendance, onResetAttendanceForDate }) => {
   const navigation = useNavigation();
   const route = useRoute();
   const { subjectId, subjectName } = route.params;
 
   const [selectedDate, setSelectedDate] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentAttendanceStatus, setCurrentAttendanceStatus] = useState(null);
+  const [dailyEntries, setDailyEntries] = useState([]);
 
-  const [subjectAttendance, setSubjectAttendance] = useState([]);
   const [markedDates, setMarkedDates] = useState({});
 
   useFocusEffect(
     React.useCallback(() => {
       const filteredAttendance = attendanceRecords.filter(record => record.subjectId === subjectId);
-      setSubjectAttendance(filteredAttendance);
+
 
       const newMarkedDates = filteredAttendance.reduce((acc, record) => {
-        acc[record.date] = {
-          selected: true,
-          marked: true,
-          dotColor: record.isPresent === true ? 'green' : record.isPresent === false ? 'red' : 'yellow',
-          selectedColor: record.isPresent === true ? 'green' : record.isPresent === false ? 'red' : 'yellow',
-        };
+        const day = record.date;
+        if (!acc[day]) {
+          acc[day] = { dots: [] };
+        }
+
+        let dotColor;
+        if (record.isPresent === true) {
+          dotColor = 'green';
+        } else if (record.isPresent === false) {
+          dotColor = 'red';
+        } else {
+          dotColor = 'yellow';
+        }
+
+        acc[day].dots.push({ color: dotColor });
         return acc;
       }, {});
       setMarkedDates(newMarkedDates);
@@ -36,13 +44,34 @@ const SubjectDetailScreen = ({ attendanceRecords, onUpdateAttendance }) => {
 
   const handleDayPress = (day) => {
     setSelectedDate(day.dateString);
-    const record = subjectAttendance.find(rec => rec.date === day.dateString);
-    setCurrentAttendanceStatus(record ? record.isPresent : null);
+    const recordsForDay = attendanceRecords.filter(
+      (rec) => rec.subjectId === subjectId && rec.date === day.dateString
+    );
+    setDailyEntries(recordsForDay);
     setModalVisible(true);
   };
 
-  const handleUpdateStatus = (status) => {
+  const handleUpdateStatus = (status, entryId = null) => {
+    onUpdateAttendance(subjectId, selectedDate, status, entryId);
+    // After updating, re-filter daily entries to reflect changes
+    const updatedRecords = attendanceRecords.filter(
+      (rec) => rec.subjectId === subjectId && rec.date === selectedDate
+    );
+    setDailyEntries(updatedRecords);
+  };
+
+  const handleAddEntry = (status) => {
     onUpdateAttendance(subjectId, selectedDate, status);
+    // After adding, re-filter daily entries to reflect changes
+    const updatedRecords = attendanceRecords.filter(
+      (rec) => rec.subjectId === subjectId && rec.date === selectedDate
+    );
+    setDailyEntries(updatedRecords);
+  };
+
+  const handleResetAttendance = () => {
+    onResetAttendanceForDate(subjectId, selectedDate);
+    setDailyEntries([]); // Clear daily entries in UI immediately
     setModalVisible(false);
   };
 
@@ -69,30 +98,72 @@ const SubjectDetailScreen = ({ attendanceRecords, onUpdateAttendance }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalHeader}>Update Attendance for {selectedDate}</Text>
+            <Text style={styles.modalHeader}>Attendance for {selectedDate}</Text>
+
+            {dailyEntries.length === 0 ? (
+              <Text style={styles.noEntriesText}>No entries for this date.</Text>
+            ) : (
+              dailyEntries.map((entry) => (
+                <View key={entry.id} style={styles.entryContainer}>
+                  <Text style={styles.entryText}>
+                    Status: {entry.isPresent === true ? 'Present' : entry.isPresent === false ? 'Absent' : 'No Class'}
+                  </Text>
+                  <View style={styles.entryButtons}>
+                    <TouchableOpacity
+                      style={[styles.statusButton, styles.statusButtonPresent, entry.isPresent === true && styles.statusButtonSelected]}
+                      onPress={() => handleUpdateStatus(true, entry.id)}
+                    >
+                      <Text style={styles.statusButtonText}>P</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.statusButton, styles.statusButtonAbsent, entry.isPresent === false && styles.statusButtonSelected]}
+                      onPress={() => handleUpdateStatus(false, entry.id)}
+                    >
+                      <Text style={styles.statusButtonText}>A</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.statusButton, styles.statusButtonNoClass, entry.isPresent === null && styles.statusButtonSelected]}
+                      onPress={() => handleUpdateStatus(null, entry.id)}
+                    >
+                      <Text style={styles.statusButtonText}>NC</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <Text style={styles.modalSubHeader}>Add New Entry:</Text>
             <TouchableOpacity
-              style={[styles.statusButton, currentAttendanceStatus === true && styles.statusButtonPresent]}
-              onPress={() => handleUpdateStatus(true)}
+              style={[styles.statusButton, styles.statusButtonPresent]}
+              onPress={() => handleAddEntry(true)}
             >
-              <Text style={styles.statusButtonText}>Present</Text>
+              <Text style={styles.statusButtonText}>Add Present</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.statusButton, currentAttendanceStatus === false && styles.statusButtonAbsent]}
-              onPress={() => handleUpdateStatus(false)}
+              style={[styles.statusButton, styles.statusButtonAbsent]}
+              onPress={() => handleAddEntry(false)}
             >
-              <Text style={styles.statusButtonText}>Absent</Text>
+              <Text style={styles.statusButtonText}>Add Absent</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.statusButton, currentAttendanceStatus === null && styles.statusButtonNoClass]}
-              onPress={() => handleUpdateStatus(null)}
+              style={[styles.statusButton, styles.statusButtonNoClass]}
+              onPress={() => handleAddEntry(null)}
             >
-              <Text style={styles.statusButtonText}>No Class</Text>
+              <Text style={styles.statusButtonText}>Add No Class</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusButton, styles.resetButton]}
+              onPress={() => handleResetAttendance()}
+            >
+              <Text style={styles.statusButtonText}>Reset All for This Day</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -164,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'yellow',
   },
   statusButtonText: {
-    color: 'white',
+    color: 'black',
     fontWeight: 'bold',
   },
   cancelButton: {
@@ -178,6 +249,44 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: 'black',
     fontWeight: 'bold',
+  },
+  resetButton: {
+    backgroundColor: '#ffc107', // A warning/reset color
+    marginTop: 10,
+  },
+  noEntriesText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10,
+  },
+  entryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 5,
+  },
+  entryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  entryButtons: {
+    flexDirection: 'row',
+  },
+  statusButtonSelected: {
+    borderWidth: 2,
+    borderColor: '#007bff',
+  },
+  modalSubHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#333',
   },
 });
 

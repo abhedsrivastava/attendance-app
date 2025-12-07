@@ -132,20 +132,28 @@ function AppContent() {
     setSubjects(prev => prev.map(s => (s.id === updated.id ? updated : s)));
   };
 
-  const handleUpdateAttendance = (subjectId, date, isPresent) => {
+  const handleUpdateAttendance = (subjectId, date, isPresent, entryId = null) => {
     setAttendanceRecords(prev => {
-      const idx = prev.findIndex(r => r.subjectId === subjectId && r.date === date);
-      if (idx !== -1) {
-        const updated = [...prev];
-        updated[idx] = { subjectId, date, isPresent };
-        return updated;
+      if (entryId) {
+        // Update existing entry
+        return prev.map(record =>
+          record.id === entryId ? { ...record, isPresent } : record
+        );
+      } else {
+        // Add new entry
+        return [...prev, { id: Date.now().toString(), subjectId, date, isPresent }];
       }
-      return [...prev, { subjectId, date, isPresent }];
     });
   };
 
   const handleSaveAttendanceLimits = (lower, upper) => {
     setAttendanceLimits({ lower, upper });
+  };
+
+  const handleResetAttendanceForDate = (subjectId, date) => {
+    setAttendanceRecords(prev =>
+      prev.filter(record => !(record.subjectId === subjectId && record.date === date))
+    );
   };
 
 
@@ -209,6 +217,7 @@ function AppContent() {
             <SubjectDetailScreen
               attendanceRecords={attendanceRecords}
               onUpdateAttendance={handleUpdateAttendance}
+              onResetAttendanceForDate={handleResetAttendanceForDate}
             />
           )}
           options={{ drawerLabel: () => null }} // Hide from drawer menu

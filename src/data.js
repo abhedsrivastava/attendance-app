@@ -1,18 +1,3 @@
-// src/data.js
-
-// Subject shape (for reference only - not TypeScript)
- // {
- //   id: string,
- //   name: string,
- //   classDays: number[] // 0 = Sunday ... 6 = Saturday
- // }
-
-// AttendanceRecord shape (for reference only)
- // {
- //   subjectId: string,
- //   date: string, // YYYY-MM-DD
- //   isPresent: boolean
- // }
 
 export const initialSubjects = [
   { id: '1', name: 'Mathematics', classDays: [1, 3, 5] }, // Monday, Wednesday, Friday
@@ -27,9 +12,9 @@ export const getDayName = (dayNumber) => {
 };
 
 export const initialAttendanceRecords = [
-  { subjectId: '1', date: '2025-11-01', isPresent: true },
-  { subjectId: '1', date: '2025-11-02', isPresent: false },
-  { subjectId: '2', date: '2025-11-01', isPresent: true },
-  { subjectId: '3', date: '2025-11-01', isPresent: true },
-  { subjectId: '4', date: '2025-11-01', isPresent: false },
+  { id: 'rec1', subjectId: '1', date: '2025-11-01', isPresent: true },
+  { id: 'rec2', subjectId: '1', date: '2025-11-02', isPresent: false },
+  { id: 'rec3', subjectId: '2', date: '2025-11-01', isPresent: true },
+  { id: 'rec4', subjectId: '3', date: '2025-11-01', isPresent: true },
+  { id: 'rec5', subjectId: '4', date: '2025-11-01', isPresent: false },
 ];
