@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
-const AttendanceScreen = ({ attendanceRecords, subjects }) => {
+const AttendanceScreen = ({ attendanceRecords, subjects, attendanceLimits }) => {
   const navigation = useNavigation();
   const subjectsAttendance = subjects.map((subject) => {
     const records = attendanceRecords.filter((record) => record.subjectId === subject.id);
@@ -21,12 +21,26 @@ const AttendanceScreen = ({ attendanceRecords, subjects }) => {
     };
   });
 
+  const getPercentageColor = (percentage) => {
+    if (percentage >= attendanceLimits.upper) {
+      return 'green';
+    } else if (percentage >= attendanceLimits.lower) {
+      return 'orange';
+    } else {
+      return 'red';
+    }
+  };
+
   const renderSubjectAttendance = ({ item }) => (
-    <View style={styles.subjectCard}>
+    <TouchableOpacity
+      style={styles.subjectCard}
+      onPress={() => navigation.navigate('SubjectDetail', { subjectId: item.subject.id, subjectName: item.subject.name })}
+    >
       <Text style={styles.subjectName}>
-        {item.subject.name}: {item.present}/{item.total} ({item.percentage}%)
+        {item.subject.name}: {item.present}/{item.total}
       </Text>
-    </View>
+      <Text style={[styles.percentageText, { color: getPercentageColor(parseFloat(item.percentage)) }]}>{item.percentage}%</Text>
+    </TouchableOpacity>
   );
 
   return (
@@ -56,23 +70,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
     position: 'relative',
     paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
-    flex: 1,
-    marginLeft: -30, // Adjust for menu icon
   },
   menuIcon: {
     position: 'absolute',
     left: 10,
-    top: 0,
+    top: 10,
     zIndex: 1,
   },
   listContent: {
@@ -88,12 +101,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   subjectName: {
     fontSize: 20,
     fontWeight: '600',
     color: '#444',
-    marginBottom: 5,
+    flex: 1,
   },
   attendanceText: {
     fontSize: 16,

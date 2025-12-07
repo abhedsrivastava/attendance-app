@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     position: 'relative',
     paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   headerTitle: {
     fontSize: 24,
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
   menuIcon: {
     position: 'absolute',
     left: 10,
-    top: 0,
+    top: 10,
     zIndex: 1,
   },
   addButton: {

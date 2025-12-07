@@ -30,7 +30,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AttendanceScreen from './src/components/AttendanceScreen';
 import HomeScreen from './src/components/HomeScreen';
 import SubjectManagementScreen from './src/components/SubjectManagementScreen';
-import AddAttendance from './src/components/AddAttendance';
+import SubjectDetailScreen from './src/components/SubjectDetailScreen';
+import SettingsScreen from './src/components/SettingsScreen';
 
 import {
   initialSubjects,
@@ -41,6 +42,7 @@ const Drawer = createDrawerNavigator();
 
 const SUBJECTS_STORAGE_KEY = '@attendance_app:subjects';
 const ATTENDANCE_STORAGE_KEY = '@attendance_app:attendanceRecords';
+const ATTENDANCE_LIMITS_STORAGE_KEY = '@attendance_app:attendanceLimits';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -61,6 +63,7 @@ function App() {
 function AppContent() {
   const [subjects, setSubjects] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [attendanceLimits, setAttendanceLimits] = useState({ lower: 65, upper: 75 });
   const [isLoading, setIsLoading] = useState(true);
 
   // Load stored data
@@ -69,9 +72,11 @@ function AppContent() {
       try {
         const storedSubjects = await AsyncStorage.getItem(SUBJECTS_STORAGE_KEY);
         const storedAttendance = await AsyncStorage.getItem(ATTENDANCE_STORAGE_KEY);
+        const storedLimits = await AsyncStorage.getItem(ATTENDANCE_LIMITS_STORAGE_KEY);
 
         setSubjects(storedSubjects ? JSON.parse(storedSubjects) : initialSubjects);
         setAttendanceRecords(storedAttendance ? JSON.parse(storedAttendance) : initialAttendanceRecords);
+        setAttendanceLimits(storedLimits ? JSON.parse(storedLimits) : { lower: 65, upper: 75 });
 
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -104,6 +109,15 @@ function AppContent() {
     );
   }, [attendanceRecords, isLoading]);
 
+  // Auto-save attendance limits
+  useEffect(() => {
+    if (isLoading) return;
+
+    AsyncStorage.setItem(ATTENDANCE_LIMITS_STORAGE_KEY, JSON.stringify(attendanceLimits)).catch(err =>
+      console.log('Save attendance limits error:', err)
+    );
+  }, [attendanceLimits, isLoading]);
+
   // CRUD handlers
   const handleAddSubject = (newSubject) => {
     setSubjects(prev => [...prev, newSubject]);
@@ -130,9 +144,11 @@ function AppContent() {
     });
   };
 
-  const handleAddAttendance = (record) => {
-    setAttendanceRecords(prev => [...prev, record]);
+  const handleSaveAttendanceLimits = (lower, upper) => {
+    setAttendanceLimits({ lower, upper });
   };
+
+
 
   if (isLoading) {
     return (
@@ -182,19 +198,32 @@ function AppContent() {
             <AttendanceScreen
               attendanceRecords={attendanceRecords}
               subjects={subjects}
+              attendanceLimits={attendanceLimits}
             />
           )}
         />
 
         <Drawer.Screen
-          name="Add Record"
+          name="SubjectDetail"
           children={() => (
-            <AddAttendance
-              onAddAttendance={handleAddAttendance}
-              subjects={subjects}
+            <SubjectDetailScreen
+              attendanceRecords={attendanceRecords}
+              onUpdateAttendance={handleUpdateAttendance}
+            />
+          )}
+          options={{ drawerLabel: () => null }} // Hide from drawer menu
+        />
+
+        <Drawer.Screen
+          name="Settings"
+          children={() => (
+            <SettingsScreen
+              onSaveLimits={handleSaveAttendanceLimits}
             />
           )}
         />
+
+
       </Drawer.Navigator>
     </SafeAreaView>
   );
